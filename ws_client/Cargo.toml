@@ -1,0 +1,19 @@
+[package]
+name = "ws_client"
+version = "0.1.0"
+edition = "2021"
+description = "Client library for streaming websocket events from cosmos rpcs"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.tendermint-rpc]
+version = "0.36"
+features = ["websocket-client"]
+[dependencies.tendermint]
+version = "0.36"
+[dependencies.anyhow]
+version = "1"
+[dependencies.futures]
+version = "0.3"
+[dependencies.tokio]
+version = "1"
+features = ["full", "parking_lot"]
