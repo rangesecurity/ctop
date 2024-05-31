@@ -6,8 +6,10 @@ description = "Client library for streaming websocket events from cosmos rpcs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies.tendermint-rpc]
-version = "0.36"
+#version = "0.36"
 features = ["websocket-client"]
+git = "https://github.com/informalsystems/tendermint-rs"
+rev = "b1aa9fde6acab36852c6e3a30c7be8f0444a6423"
 [dependencies.tendermint]
 version = "0.36"
 [dependencies.anyhow]

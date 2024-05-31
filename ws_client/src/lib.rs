@@ -17,7 +17,7 @@ impl WsClient {
         }))
     }
     pub async fn subscribe_votes(&self) -> anyhow::Result<()> {
-        let query: Query = "tm.event='Vote'".parse()?;
+        let query: Query = "tm.event = 'Vote'".parse()?;
         let mut sub = self.c.subscribe(query).await?;
         while let Some(res) = sub.next().await {
             println!("{res:#?}");

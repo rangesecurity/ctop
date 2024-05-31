@@ -3,15 +3,8 @@ name = "cli"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies.tendermint-rpc]
-version = "0.36"
-features = ["websocket-client"]
-[dependencies.tendermint]
-version = "0.36"
 [dependencies.anyhow]
 version = "1"
-[dependencies.futures]
-version = "0.3"
 [dependencies.tokio]
 version = "1"
 features = ["full", "parking_lot"]
@@ -19,3 +12,5 @@ features = ["full", "parking_lot"]
 version = "4"
 [dependencies.ws_client]
 path = "../ws_client"
+[dependencies.utils]
+path = "../utils"
