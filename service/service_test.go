@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cometbft/cometbft/types"
 	"github.com/joho/godotenv"
 	"github.com/rangesecurity/ctop/service"
 	"github.com/stretchr/testify/require"
@@ -28,6 +29,11 @@ func TestService(t *testing.T) {
 	require.NoError(t, s.CredClient.FlushAll(ctx))
 	err = s.StartEventSubscriptions()
 	require.NoError(t, err)
+	outCh := make(chan interface{}, 1024)
+	require.NoError(t, s.StreamRedisEvents("osmosis", types.EventQueryVote, outCh))
+	require.NoError(t, s.StreamRedisEvents("osmosis", types.EventQueryNewRound, outCh))
+	require.NoError(t, s.StreamRedisEvents("osmosis", types.EventQueryNewRoundStep, outCh))
+
 	time.Sleep(time.Second * 10)
 
 	msgs, err := s.CredClient.Redis().XRange(
@@ -53,4 +59,6 @@ func TestService(t *testing.T) {
 	).Result()
 	require.NoError(t, err)
 	require.Greater(t, len(msgs), 0)
+	require.Greater(t, len(outCh), 0)
+
 }
