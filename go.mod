@@ -4,7 +4,9 @@ go 1.22.3
 
 require (
 	github.com/cometbft/cometbft v0.38.7
+	github.com/joho/godotenv v1.5.1
 	github.com/redis/go-redis/v9 v9.5.2
+	github.com/rs/zerolog v1.29.0
 	github.com/stretchr/testify v1.8.4
 )
 
@@ -32,10 +34,11 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20220708102147-0a8a51822cae // indirect
 	github.com/onsi/ginkgo v1.16.4 // indirect
