@@ -2,8 +2,6 @@ package wsclient
 
 import (
 	"context"
-	"net/http"
-	"time"
 
 	rpcclient "github.com/cometbft/cometbft/rpc/client/http"
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
@@ -15,16 +13,7 @@ type WsClient struct {
 }
 
 func NewClient(url string) (*WsClient, error) {
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			ForceAttemptHTTP2:     true,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-		},
-	}
-	client, err := rpcclient.NewWithClient(url, "/websocket", httpClient)
+	client, err := rpcclient.New(url, "/websocket")
 	if err != nil {
 		return nil, err
 	}

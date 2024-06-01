@@ -7,14 +7,18 @@ import (
 	"time"
 
 	"github.com/cometbft/cometbft/types"
+	"github.com/joho/godotenv"
 	"github.com/rangesecurity/ctop/wsclient"
 	"github.com/stretchr/testify/require"
 )
 
 func TestWsClientSubscribeVotes(t *testing.T) {
+	envs, err := godotenv.Read("../.env")
+	require.NoError(t, err)
+	rpcUrl := envs["OSMOSIS_RPC"]
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	client, err := wsclient.NewClient("tcp://..:12557")
+	client, err := wsclient.NewClient(rpcUrl)
 	require.NoError(t, err)
 	outCh, err := client.SubscribeVotes(ctx)
 	require.NoError(t, err)
@@ -39,9 +43,12 @@ func TestWsClientSubscribeVotes(t *testing.T) {
 }
 
 func TestWsClientSubscribeNewRound(t *testing.T) {
+	envs, err := godotenv.Read("../.env")
+	require.NoError(t, err)
+	rpcUrl := envs["OSMOSIS_RPC"]
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	client, err := wsclient.NewClient("tcp://..:12557")
+	client, err := wsclient.NewClient(rpcUrl)
 	require.NoError(t, err)
 	outCh, err := client.SubscribeNewRound(ctx)
 	require.NoError(t, err)
@@ -66,9 +73,12 @@ func TestWsClientSubscribeNewRound(t *testing.T) {
 }
 
 func TestWsClientSubscribeNewRoundStep(t *testing.T) {
+	envs, err := godotenv.Read("../.env")
+	require.NoError(t, err)
+	rpcUrl := envs["OSMOSIS_RPC"]
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	client, err := wsclient.NewClient("tcp://..:12557")
+	client, err := wsclient.NewClient(rpcUrl)
 	require.NoError(t, err)
 	outCh, err := client.SubscribeNewRoundStep(ctx)
 	require.NoError(t, err)
