@@ -10,6 +10,8 @@ local round = ARGV[4]
 local signature = ARGV[5]
 local index = ARGV[6]
 local block_hash = ARGV[7]
+local vote_type = ARGV[8]
+local timestamp = ARGV[9]
 
 -- Generate the sequence key based on the base key and block height
 local sequence_key = base_key .. ":sequence_vote:" .. block_height
@@ -21,7 +23,7 @@ local sequence = redis.call("INCR", sequence_key)
 local id = block_height .. "-" .. sequence
 
 -- Add entry to the stream
-redis.call("XADD", base_key .. ":votes", id, "validator", validator, "round", round, "signature", signature, "index", index, "block_hash", block_hash)
+redis.call("XADD", base_key .. ":votes", id, "validator", validator, "round", round, "signature", signature, "index", index, "block_hash", block_hash, "type", vote_type, "timestamp", timestamp)
 
 return id
 `)

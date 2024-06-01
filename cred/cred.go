@@ -44,6 +44,8 @@ func (c *CredClient) StoreVote(ctx context.Context, network string, voteInfo typ
 			voteInfo.Vote.Signature,
 			voteInfo.Vote.ValidatorIndex,
 			voteInfo.Vote.BlockID.String(),
+			voteInfo.Vote.Type.String(),
+			voteInfo.Vote.Timestamp.String(),
 		},
 	).Err()
 }
