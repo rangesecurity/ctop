@@ -7,24 +7,24 @@ import (
 )
 
 type Database struct {
-	db *pg.DB
+	DB *pg.DB
 }
 
-func New(url string, temp bool) (*Database, error) {
+func New(url string) (*Database, error) {
 	opt, err := pg.ParseURL(url)
 	if err != nil {
 		return nil, err
 	}
 	opt.TLSConfig = nil
-	db := &Database{db: pg.Connect(opt)}
-	return db, db.createSchema(temp)
+	db := &Database{DB: pg.Connect(opt)}
+	return db, db.createSchema()
 }
 
 func (d *Database) StoreVote(
 	network string,
 	vote types.Vote,
 ) error {
-	_, err := d.db.Model(&VoteEvent{
+	_, err := d.DB.Model(&VoteEvent{
 		Network:          network,
 		Type:             vote.Type.String(),
 		Height:           vote.Height,
@@ -42,7 +42,7 @@ func (d *Database) StoreNewRound(
 	network string,
 	roundInfo types.EventDataNewRound,
 ) error {
-	_, err := d.db.Model(&NewRoundEvent{
+	_, err := d.DB.Model(&NewRoundEvent{
 		Network:          network,
 		Height:           roundInfo.Height,
 		Round:            roundInfo.Round,
@@ -57,7 +57,7 @@ func (d *Database) StoreNewRoundStep(
 	network string,
 	roundInfo types.EventDataRoundState,
 ) error {
-	_, err := d.db.Model(&NewRoundStepEvent{
+	_, err := d.DB.Model(&NewRoundStepEvent{
 		Network: network,
 		Height:  roundInfo.Height,
 		Round:   roundInfo.Round,
@@ -66,21 +66,21 @@ func (d *Database) StoreNewRoundStep(
 	return err
 }
 func (d *Database) GetVotes(network string) (votes []VoteEvent, err error) {
-	err = d.db.Model(&votes).Where("network = ?", network).Select()
+	err = d.DB.Model(&votes).Where("network = ?", network).Select()
 	return
 }
 
 func (d *Database) GetNewRounds(network string) (rounds []NewRoundEvent, err error) {
-	err = d.db.Model(&rounds).Where("network = ?", network).Select()
+	err = d.DB.Model(&rounds).Where("network = ?", network).Select()
 	return
 }
 
 func (d *Database) GetNewRoundSteps(network string) (steps []NewRoundStepEvent, err error) {
-	err = d.db.Model(&steps).Where("network = ?", network).Select()
+	err = d.DB.Model(&steps).Where("network = ?", network).Select()
 	return
 }
 
-func (d *Database) createSchema(temp bool) error {
+func (d *Database) createSchema() error {
 	models := []interface{}{
 		(*VoteEvent)(nil),
 		(*NewRoundEvent)(nil),
@@ -88,10 +88,7 @@ func (d *Database) createSchema(temp bool) error {
 	}
 
 	for _, model := range models {
-		err := d.db.Model(model).CreateTable(&orm.CreateTableOptions{
-			Temp:        temp,
-			IfNotExists: true,
-		})
+		err := d.DB.Model(model).CreateTable(&orm.CreateTableOptions{})
 		if err != nil {
 			return err
 		}

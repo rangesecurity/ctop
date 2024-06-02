@@ -14,21 +14,23 @@ import (
 	"github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/types"
 	"github.com/rangesecurity/ctop/cred"
+	"github.com/rangesecurity/ctop/db"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 )
 
 type RedisEventStream struct {
 	CredClient *cred.CredClient
-
-	ctx    context.Context
-	cancel context.CancelFunc
+	Database   *db.Database
+	ctx        context.Context
+	cancel     context.CancelFunc
 }
 
 func NewRedisEventStream(
 	ctx context.Context,
 	redisUrl string,
 	unsafe bool,
+	database *db.Database,
 ) (*RedisEventStream, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	cc, err := cred.New(ctx, redisUrl, unsafe)
@@ -38,9 +40,103 @@ func NewRedisEventStream(
 	}
 	return &RedisEventStream{
 		CredClient: cc,
+		Database:   database,
 		ctx:        ctx,
 		cancel:     cancel,
 	}, nil
+}
+
+func (rds *RedisEventStream) PersistVoteEvents(
+	network string,
+) error {
+	outCh := make(chan interface{}, 1024)
+	if err := rds.StreamRedisEvents(
+		network,
+		types.EventQueryVote,
+		outCh,
+	); err != nil {
+		return fmt.Errorf("failed to stream redis events %+v", err)
+	}
+	for {
+		select {
+		case msg := <-outCh:
+			voteInfo, ok := msg.(*types.Vote)
+			if !ok {
+				log.Error().Msg("unexpected msg type")
+				continue
+			}
+			if err := rds.Database.StoreVote(
+				network,
+				*voteInfo,
+			); err != nil {
+				log.Error().Err(err).Msg("failed to store vote")
+			}
+		case <-rds.ctx.Done():
+			return nil
+		}
+	}
+}
+
+func (rds *RedisEventStream) PersistNewRoundEvents(
+	network string,
+) error {
+	outCh := make(chan interface{}, 256)
+	if err := rds.StreamRedisEvents(
+		network,
+		types.EventQueryNewRound,
+		outCh,
+	); err != nil {
+		return fmt.Errorf("failed to stream redis events %+v", err)
+	}
+	for {
+		select {
+		case msg := <-outCh:
+			roundInfo, ok := msg.(*types.EventDataNewRound)
+			if !ok {
+				log.Error().Msg("unexpected msg type")
+				continue
+			}
+			if err := rds.Database.StoreNewRound(
+				network,
+				*roundInfo,
+			); err != nil {
+				log.Error().Err(err).Msg("failed to store round")
+			}
+		case <-rds.ctx.Done():
+			return nil
+		}
+	}
+}
+
+func (rds *RedisEventStream) PersistNewRoundStepEvents(
+	network string,
+) error {
+	outCh := make(chan interface{}, 256)
+	if err := rds.StreamRedisEvents(
+		network,
+		types.EventQueryNewRoundStep,
+		outCh,
+	); err != nil {
+		return fmt.Errorf("failed to stream redis events %+v", err)
+	}
+	for {
+		select {
+		case msg := <-outCh:
+			roundState, ok := msg.(*types.EventDataRoundState)
+			if !ok {
+				log.Error().Msg("unexpected msg type")
+				continue
+			}
+			if err := rds.Database.StoreNewRoundStep(
+				network,
+				*roundState,
+			); err != nil {
+				log.Error().Err(err).Msg("failed to store round state")
+			}
+		case <-rds.ctx.Done():
+			return nil
+		}
+	}
 }
 
 // streams events from redis, inserting into database
