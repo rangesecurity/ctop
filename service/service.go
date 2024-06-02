@@ -110,63 +110,178 @@ func (s *Service) StreamRedisEvents(
 ) error {
 	s.Lock()
 	defer s.Unlock()
+	var (
+		streamKey      string
+		isVote         bool
+		isNewRound     bool
+		isNewRoundStep bool
+	)
 	if ok, _ := eventType.Matches(map[string][]string{"tm.event": {"Vote"}}); ok {
-		go func() {
-			for {
-				entries, err := s.CredClient.Redis().XRead(
-					s.ctx,
-					&redis.XReadArgs{
-						Streams: []string{network + ":votes", "0"},
-						Block:   0,
-					},
-				).Result()
-				if err != nil {
-					log.Err(err).Msg("failed to read redis stream")
-					continue
-				}
-				select {
-				case <-s.ctx.Done():
-					return
-				default:
-					for _, stream := range entries {
-						for _, message := range stream.Messages {
-							parts := strings.Split(message.ID, "-")
-							if len(parts) != 2 {
-								// improperly formatted id
-								continue
-							}
-							blockHeight, err := strconv.ParseInt(parts[0], 10, 64)
-							if err != nil {
-								continue
-							}
+		streamKey = ":votes"
+		isVote = true
 
-							voteInfo, err := parseRedisValueToVote(blockHeight, message.Values)
-							if err != nil {
-								fmt.Printf("failed to parse value %+v\n", err)
-								continue
-							}
-							outCh <- voteInfo
-						}
-					}
-				}
-
-			}
-
-		}()
 	} else if ok, _ := eventType.Matches(map[string][]string{"tm.event": {"NewRound"}}); ok {
-		fmt.Println("streaming new round")
-		// TODO
+		streamKey = ":new_round"
+		isNewRound = true
 	} else if ok, _ := eventType.Matches(map[string][]string{"tm.event": {"NewRoundStep"}}); ok {
-		fmt.Println("streaming new rond step")
-		// TODO
+		streamKey = ":new_round_step"
+		isNewRoundStep = true
 	} else {
 		return fmt.Errorf("unsupported event %s", eventType)
 	}
+
+	go func() {
+		for {
+			entries, err := s.CredClient.Redis().XRead(
+				s.ctx,
+				&redis.XReadArgs{
+					Streams: []string{network + streamKey, "0"},
+					Block:   0,
+				},
+			).Result()
+			if err != nil {
+				log.Err(err).Msg("failed to read redis stream")
+				continue
+			}
+			select {
+			case <-s.ctx.Done():
+				return
+			default:
+				for _, stream := range entries {
+					for _, message := range stream.Messages {
+						parts := strings.Split(message.ID, "-")
+						if len(parts) != 2 {
+							// improperly formatted id
+							continue
+						}
+						blockHeight, err := strconv.ParseInt(parts[0], 10, 64)
+						if err != nil {
+							continue
+						}
+						if isVote {
+							voteInfo, err := parseRedisValueToVote(blockHeight, message.Values)
+							if err != nil {
+								fmt.Printf("vote parse failed %+v\n", err)
+								log.Error().Err(err).Msg("failed to parse redis value to vote object")
+								continue
+							}
+							outCh <- voteInfo
+						} else if isNewRound {
+							newRound, err := parseRedisValueToNewRound(blockHeight, message.Values)
+							if err != nil {
+								fmt.Printf("new round parse failed %+v\n", err)
+								log.Error().Err(err).Msg("failed to parse redis value to new round object")
+							}
+							outCh <- newRound
+						} else if isNewRoundStep {
+							roundState, err := parseRedisValueToRoundState(blockHeight, message.Values)
+							if err != nil {
+								fmt.Printf("round state parse failed %+v\n", err)
+								log.Error().Err(err).Msg("failed to parse redis value to round state object")
+							}
+							outCh <- roundState
+						} else {
+							log.Error().Msg("event type is neither vote, new_round, or new_round_step. this is unexpected")
+						}
+
+					}
+				}
+			}
+
+		}
+
+	}()
 	return nil
 }
 
 func (s *Service) Close() {
 	s.cancel()
+}
+
+func parseRedisValueToNewRound(blockHeight int64, values map[string]interface{}) (*types.EventDataNewRound, error) {
+	var (
+		err           error
+		ok            bool
+		round         int64
+		step          string
+		proposer      string
+		proposerIndex int64
+	)
+	if values["round"] == nil {
+		return nil, fmt.Errorf("round is nil")
+	} else if round_, ok := values["round"].(string); !ok {
+		return nil, fmt.Errorf("failed to parse round")
+	} else {
+		round, err = strconv.ParseInt(round_, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("round ParseInt failed %s", err)
+		}
+	}
+
+	if values["step"] == nil {
+		return nil, fmt.Errorf("step is nil")
+	} else if step, ok = values["step"].(string); !ok {
+		return nil, fmt.Errorf("failed to parse step")
+	}
+
+	if values["proposer"] == nil {
+		return nil, fmt.Errorf("proposer is nil")
+	} else if proposer, ok = values["proposer"].(string); !ok {
+		return nil, fmt.Errorf("failed to parse proposer")
+	}
+
+	if values["proposer_index"] == nil {
+		return nil, fmt.Errorf("proposer_index is nil")
+	} else if proposerIndex_, ok := values["proposer_index"].(string); !ok {
+		return nil, fmt.Errorf("failed to parse proposer_index")
+	} else {
+		proposerIndex, err = strconv.ParseInt(proposerIndex_, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("proposer_index ParseInt failed")
+		}
+	}
+
+	return &types.EventDataNewRound{
+		Height: blockHeight,
+		Round:  int32(round),
+		Step:   step,
+		Proposer: types.ValidatorInfo{
+			Address: crypto.AddressHash([]byte(proposer)),
+			Index:   int32(proposerIndex),
+		},
+	}, nil
+
+}
+
+func parseRedisValueToRoundState(blockHeight int64, values map[string]interface{}) (*types.EventDataRoundState, error) {
+	var (
+		err   error
+		ok    bool
+		round int64
+		step  string
+	)
+
+	if values["round"] == nil {
+		return nil, fmt.Errorf("round is nil")
+	} else if round_, ok := values["round"].(string); !ok {
+		return nil, fmt.Errorf("failed to parse round")
+	} else {
+		round, err = strconv.ParseInt(round_, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("round ParseInt failed %s", err)
+		}
+	}
+
+	if values["step"] == nil {
+		return nil, fmt.Errorf("step is nil")
+	} else if step, ok = values["step"].(string); !ok {
+		return nil, fmt.Errorf("failed to parse step")
+	}
+	return &types.EventDataRoundState{
+		Height: blockHeight,
+		Round:  int32(round),
+		Step:   step,
+	}, nil
 }
 
 func parseRedisValueToVote(blockHeight int64, values map[string]interface{}) (*types.Vote, error) {

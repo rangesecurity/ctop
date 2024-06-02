@@ -3,7 +3,6 @@ package service_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/cometbft/cometbft/types"
 	"github.com/joho/godotenv"
@@ -29,36 +28,59 @@ func TestService(t *testing.T) {
 	require.NoError(t, s.CredClient.FlushAll(ctx))
 	err = s.StartEventSubscriptions()
 	require.NoError(t, err)
-	outCh := make(chan interface{}, 1024)
-	require.NoError(t, s.StreamRedisEvents("osmosis", types.EventQueryVote, outCh))
-	require.NoError(t, s.StreamRedisEvents("osmosis", types.EventQueryNewRound, outCh))
-	require.NoError(t, s.StreamRedisEvents("osmosis", types.EventQueryNewRoundStep, outCh))
+	var (
+		receivedVoteEvent         = make(chan bool, 1)
+		receivedNewRoundEvent     = make(chan bool, 1)
+		receivedNewRoundStepEvent = make(chan bool, 1)
+	)
+	go func() {
+		outCh := make(chan interface{}, 1024)
+		require.NoError(t, s.StreamRedisEvents("osmosis", types.EventQueryVote, outCh))
+		for {
+			select {
+			case msg := <-outCh:
+				msg, ok := msg.(*types.Vote)
+				require.True(t, ok)
+				receivedVoteEvent <- true
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	go func() {
+		outCh := make(chan interface{}, 1024)
+		require.NoError(t, s.StreamRedisEvents("osmosis", types.EventQueryNewRound, outCh))
+		for {
+			select {
+			case msg := <-outCh:
+				msg, ok := msg.(*types.EventDataNewRound)
+				require.True(t, ok)
+				receivedNewRoundEvent <- true
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	go func() {
+		outCh := make(chan interface{}, 1024)
+		require.NoError(t, s.StreamRedisEvents("osmosis", types.EventQueryNewRoundStep, outCh))
+		for {
+			select {
+			case msg := <-outCh:
+				msg, ok := msg.(*types.EventDataRoundState)
+				require.True(t, ok)
+				receivedNewRoundStepEvent <- true
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
-	time.Sleep(time.Second * 10)
-
-	msgs, err := s.CredClient.Redis().XRange(
-		ctx,
-		"osmosis:votes",
-		"-", "+",
-	).Result()
-	require.NoError(t, err)
-	require.Greater(t, len(msgs), 0)
-
-	msgs, err = s.CredClient.Redis().XRange(
-		ctx,
-		"osmosis:new_round",
-		"-", "+",
-	).Result()
-	require.NoError(t, err)
-	require.Greater(t, len(msgs), 0)
-
-	msgs, err = s.CredClient.Redis().XRange(
-		ctx,
-		"osmosis:new_round_step",
-		"-", "+",
-	).Result()
-	require.NoError(t, err)
-	require.Greater(t, len(msgs), 0)
-	require.Greater(t, len(outCh), 0)
+	ok := <-receivedNewRoundEvent
+	require.True(t, ok)
+	ok = <-receivedVoteEvent
+	require.True(t, ok)
+	ok = <-receivedNewRoundStepEvent
+	require.True(t, ok)
 
 }
