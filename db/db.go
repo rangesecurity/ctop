@@ -17,7 +17,7 @@ func New(url string) (*Database, error) {
 	}
 	opt.TLSConfig = nil
 	db := &Database{DB: pg.Connect(opt)}
-	return db, db.createSchema()
+	return db, db.CreateSchema()
 }
 
 func (d *Database) StoreVote(
@@ -80,7 +80,7 @@ func (d *Database) GetNewRoundSteps(network string) (steps []NewRoundStepEvent, 
 	return
 }
 
-func (d *Database) createSchema() error {
+func (d *Database) CreateSchema() error {
 	models := []interface{}{
 		(*VoteEvent)(nil),
 		(*NewRoundEvent)(nil),
@@ -88,7 +88,9 @@ func (d *Database) createSchema() error {
 	}
 
 	for _, model := range models {
-		err := d.DB.Model(model).CreateTable(&orm.CreateTableOptions{})
+		err := d.DB.Model(model).CreateTable(&orm.CreateTableOptions{
+			IfNotExists: true,
+		})
 		if err != nil {
 			return err
 		}
