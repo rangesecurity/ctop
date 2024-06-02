@@ -33,9 +33,11 @@ func TestService(t *testing.T) {
 		receivedNewRoundEvent     = make(chan bool, 1)
 		receivedNewRoundStepEvent = make(chan bool, 1)
 	)
+
+	rds, err := service.NewRedisEventStream(ctx, "localhost:6379", true)
 	go func() {
 		outCh := make(chan interface{}, 1024)
-		require.NoError(t, s.StreamRedisEvents("osmosis", types.EventQueryVote, outCh))
+		require.NoError(t, rds.StreamRedisEvents("osmosis", types.EventQueryVote, outCh))
 		for {
 			select {
 			case msg := <-outCh:
@@ -49,7 +51,7 @@ func TestService(t *testing.T) {
 	}()
 	go func() {
 		outCh := make(chan interface{}, 1024)
-		require.NoError(t, s.StreamRedisEvents("osmosis", types.EventQueryNewRound, outCh))
+		require.NoError(t, rds.StreamRedisEvents("osmosis", types.EventQueryNewRound, outCh))
 		for {
 			select {
 			case msg := <-outCh:
@@ -63,7 +65,7 @@ func TestService(t *testing.T) {
 	}()
 	go func() {
 		outCh := make(chan interface{}, 1024)
-		require.NoError(t, s.StreamRedisEvents("osmosis", types.EventQueryNewRoundStep, outCh))
+		require.NoError(t, rds.StreamRedisEvents("osmosis", types.EventQueryNewRoundStep, outCh))
 		for {
 			select {
 			case msg := <-outCh:
