@@ -65,6 +65,7 @@ func (rds *RedisEventStream) PersistVoteEvents(
 				log.Error().Msg("unexpected msg type")
 				continue
 			}
+			log.Info().Any("vote", voteInfo).Msg("received vote")
 			if err := rds.Database.StoreVote(
 				network,
 				*voteInfo,
@@ -175,7 +176,7 @@ func (rds *RedisEventStream) StreamRedisEvents(
 				},
 			).Result()
 			if err != nil {
-				log.Err(err).Msg("failed to read redis stream")
+				log.Err(err).Str("event.type", streamKey[1:]).Msg("failed to read redis stream")
 				continue
 			}
 			select {

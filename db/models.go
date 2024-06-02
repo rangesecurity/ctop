@@ -15,12 +15,12 @@ type VoteEvent struct {
 	ID               uuid.UUID `pg:"type:uuid,default:gen_random_uuid()"`
 	Network          string
 	Type             string
-	Height           int64
-	Round            int32
+	Height           int
+	Round            int    `pg:"default:0"`
 	BlockID          string `pb:"block_id"`
 	Timestamp        time.Time
 	ValidatorAddress string `pg:"validator_address"`
-	ValidatorIndex   int32  `pg:"validator_index"`
+	ValidatorIndex   int    `pg:"validator_index"`
 	Signature        []byte
 }
 
@@ -31,11 +31,11 @@ type NewRoundEvent struct {
 	ID      uuid.UUID `pg:"type:uuid,default:gen_random_uuid()"`
 	Network string
 
-	Height           int64
-	Round            int32
+	Height           int
+	Round            int
 	Step             string
 	ValidatorAddress string `pg:"validator_address"`
-	ValidatorIndex   int32  `pg:"validator_index"`
+	ValidatorIndex   int    `pg:"validator_index"`
 }
 
 type NewRoundStepEvent struct {
@@ -45,7 +45,7 @@ type NewRoundStepEvent struct {
 	ID      uuid.UUID `pg:"type:uuid,default:gen_random_uuid()"`
 	Network string
 
-	Height int64
-	Round  int32
+	Height int
+	Round  int
 	Step   string
 }

@@ -27,12 +27,12 @@ func (d *Database) StoreVote(
 	_, err := d.DB.Model(&VoteEvent{
 		Network:          network,
 		Type:             vote.Type.String(),
-		Height:           vote.Height,
-		Round:            vote.Round,
+		Height:           int(vote.Height),
+		Round:            int(vote.Round),
 		BlockID:          vote.BlockID.String(),
 		Timestamp:        vote.Timestamp,
 		ValidatorAddress: vote.ValidatorAddress.String(),
-		ValidatorIndex:   vote.ValidatorIndex,
+		ValidatorIndex:   int(vote.ValidatorIndex),
 		Signature:        vote.Signature,
 	}).Insert()
 	return err
@@ -44,11 +44,11 @@ func (d *Database) StoreNewRound(
 ) error {
 	_, err := d.DB.Model(&NewRoundEvent{
 		Network:          network,
-		Height:           roundInfo.Height,
-		Round:            roundInfo.Round,
+		Height:           int(roundInfo.Height),
+		Round:            int(roundInfo.Round),
 		Step:             roundInfo.Step,
 		ValidatorAddress: roundInfo.Proposer.Address.String(),
-		ValidatorIndex:   roundInfo.Proposer.Index,
+		ValidatorIndex:   int(roundInfo.Proposer.Index),
 	}).Insert()
 	return err
 }
@@ -59,8 +59,8 @@ func (d *Database) StoreNewRoundStep(
 ) error {
 	_, err := d.DB.Model(&NewRoundStepEvent{
 		Network: network,
-		Height:  roundInfo.Height,
-		Round:   roundInfo.Round,
+		Height:  int(roundInfo.Height),
+		Round:   int(roundInfo.Round),
 		Step:    roundInfo.Step,
 	}).Insert()
 	return err

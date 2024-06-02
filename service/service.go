@@ -15,6 +15,8 @@ type Service struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
 
+	wg sync.WaitGroup
+
 	sync.RWMutex
 }
 
@@ -42,7 +44,7 @@ func NewService(
 		connectors = append(connectors, connector)
 	}
 
-	return &Service{CredClient: cc, connectors: connectors, ctx: ctx, cancel: cancel}, nil
+	return &Service{CredClient: cc, connectors: connectors, ctx: ctx, cancel: cancel, wg: sync.WaitGroup{}}, nil
 }
 
 // starts all connectors and listens to incoming events
@@ -53,7 +55,9 @@ func (s *Service) StartEventSubscriptions() error {
 		if err := connector.Start(); err != nil {
 			return fmt.Errorf("failed to start connector %s", connector.network)
 		}
+		s.wg.Add(1)
 		go func(connector *Connector) {
+			defer s.wg.Done()
 			network := connector.Network()
 			for {
 				select {
@@ -67,6 +71,17 @@ func (s *Service) StartEventSubscriptions() error {
 					); err != nil {
 						log.Error().Err(err).Msg("failed to store vote")
 					}
+				}
+			}
+		}(connector)
+		s.wg.Add(1)
+		go func(connector *Connector) {
+			defer s.wg.Done()
+			network := connector.Network()
+			for {
+				select {
+				case <-s.ctx.Done():
+					return
 				case roundInfo := <-connector.GetNewRounds():
 					if err := s.CredClient.StoreNewRound(
 						s.ctx,
@@ -75,6 +90,18 @@ func (s *Service) StartEventSubscriptions() error {
 					); err != nil {
 						log.Error().Err(err).Msg("failed to store round")
 					}
+				}
+			}
+		}(connector)
+		s.wg.Add(1)
+		go func(connector *Connector) {
+			defer s.wg.Done()
+			network := connector.Network()
+			for {
+				select {
+				case <-s.ctx.Done():
+					return
+
 				case roundStep := <-connector.GetNewRoundSteps():
 					if err := s.CredClient.StoreNewRoundStep(
 						s.ctx,
@@ -92,4 +119,6 @@ func (s *Service) StartEventSubscriptions() error {
 
 func (s *Service) Close() {
 	s.cancel()
+	// wait for shutdown to complete
+	s.wg.Wait()
 }
