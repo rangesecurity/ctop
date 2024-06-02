@@ -24,7 +24,7 @@ func NewClient(url string) (*WsClient, error) {
 }
 
 func (ws *WsClient) SubscribeVotes(ctx context.Context) (<-chan coretypes.ResultEvent, error) {
-	return ws.client.Subscribe(ctx, "votesub", types.EventQueryVote.String(), 256)
+	return ws.client.Subscribe(ctx, "votesub", types.EventQueryVote.String(), 1024)
 
 }
 
