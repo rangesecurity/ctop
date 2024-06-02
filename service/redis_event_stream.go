@@ -196,29 +196,32 @@ func (rds *RedisEventStream) StreamRedisEvents(
 						if isVote {
 							voteInfo, err := parseRedisValueToVote(blockHeight, message.Values)
 							if err != nil {
-								fmt.Printf("vote parse failed %+v\n", err)
-								log.Error().Err(err).Msg("failed to parse redis value to vote object")
+								log.Error().Err(err).Str("event.type", streamKey[1:]).Msg("failed to parse redis value to vote object")
 								continue
 							}
 							outCh <- voteInfo
 						} else if isNewRound {
 							newRound, err := parseRedisValueToNewRound(blockHeight, message.Values)
 							if err != nil {
-								fmt.Printf("new round parse failed %+v\n", err)
-								log.Error().Err(err).Msg("failed to parse redis value to new round object")
+								log.Error().Err(err).Str("event.type", streamKey[1:]).Msg("failed to parse redis value to new round object")
+								continue
 							}
 							outCh <- newRound
 						} else if isNewRoundStep {
 							roundState, err := parseRedisValueToRoundState(blockHeight, message.Values)
 							if err != nil {
-								fmt.Printf("round state parse failed %+v\n", err)
-								log.Error().Err(err).Msg("failed to parse redis value to round state object")
+								log.Error().Err(err).Str("event.type", streamKey[1:]).Msg("failed to parse redis value to round state object")
+								continue
 							}
 							outCh <- roundState
 						} else {
-							log.Error().Msg("event type is neither vote, new_round, or new_round_step. this is unexpected")
+							log.Error().Str("event.type", streamKey).Msg("event type is neither vote, new_round, or new_round_step. this is unexpected")
+							continue
 						}
-
+						// clear out messages which we pulled from redis
+						if err := rds.CredClient.Redis().XDel(rds.ctx, network+streamKey, message.ID).Err(); err != nil {
+							log.Error().Err(err).Str("event.type", streamKey[1:]).Str("id", message.ID).Msg("failed to clear message from stream")
+						}
 					}
 				}
 			}

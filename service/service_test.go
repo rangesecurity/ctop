@@ -48,6 +48,9 @@ func TestService(t *testing.T) {
 		}
 	}
 
+	cleanUp()
+	require.NoError(t, database.CreateSchema())
+
 	votes, err := database.GetVotes("osmosis")
 	require.NoError(t, err)
 	require.Equal(t, len(votes), 0)
@@ -79,7 +82,7 @@ func TestService(t *testing.T) {
 		require.NoError(t, rds.PersistVoteEvents("osmosis"))
 	}()
 
-	time.Sleep(time.Second * 15)
+	time.Sleep(time.Second * 20)
 
 	votes, err = rds.Database.GetVotes("osmosis")
 	require.NoError(t, err)
