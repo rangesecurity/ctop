@@ -52,7 +52,7 @@ func TestService(t *testing.T) {
 	recreate := func() {
 		cleanUp()
 		migrator := migrate.NewMigrator(database.DB, migrations.Migrations)
-		migrator.Init(context.Background())
+		migrator.Reset(context.Background())
 		database.CreateSchema(context.Background())
 	}
 	recreate()

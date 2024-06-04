@@ -37,8 +37,7 @@ func TestDb(t *testing.T) {
 	recreate := func() {
 		cleanUp()
 		migrator := migrate.NewMigrator(database.DB, migrations.Migrations)
-		migrator.Init(context.Background())
-		migrator.Rollback(context.Background())
+		migrator.Reset(context.Background())
 		database.CreateSchema(context.Background())
 	}
 	recreate()
@@ -75,7 +74,6 @@ func TestDb(t *testing.T) {
 	roundSteps, err := database.GetNewRoundSteps(context.Background(), "osmosis")
 	require.NoError(t, err)
 	require.Len(t, roundSteps, 1)
-	cleanUp()
 }
 
 func exampleVote(height int64, t byte) *types.Vote {
