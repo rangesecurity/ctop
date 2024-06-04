@@ -2,3 +2,5 @@
 .env
 
 ctop
+
+cmd/bun/bun

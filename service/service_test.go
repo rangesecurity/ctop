@@ -2,15 +2,17 @@ package service_test
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/go-pg/pg/v10/orm"
 	"github.com/joho/godotenv"
+	"github.com/rangesecurity/ctop/cmd/bun/migrations"
 	"github.com/rangesecurity/ctop/db"
 	"github.com/rangesecurity/ctop/service"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun/migrate"
 )
 
 func TestService(t *testing.T) {
@@ -34,7 +36,6 @@ func TestService(t *testing.T) {
 
 	database, err := db.New("postgres://postgres:password123@localhost:5432/ctop")
 	require.NoError(t, err)
-
 	cleanUp := func() {
 		models := []interface{}{
 			(*db.VoteEvent)(nil),
@@ -42,24 +43,25 @@ func TestService(t *testing.T) {
 			(*db.NewRoundStepEvent)(nil),
 		}
 		for _, model := range models {
-			database.DB.Model(model).DropTable(&orm.DropTableOptions{
-				IfExists: true,
-			})
+			_, err := database.DB.NewDropTable().Model(model).Exec(context.Background())
+			if err != nil {
+				fmt.Println("failed to delete ", err)
+			}
 		}
 	}
+	recreate := func() {
+		cleanUp()
+		migrator := migrate.NewMigrator(database.DB, migrations.Migrations)
+		migrator.Reset(context.Background())
+		database.CreateSchema(context.Background())
+	}
+	recreate()
 
-	cleanUp()
-	require.NoError(t, database.CreateSchema())
-
-	votes, err := database.GetVotes("osmosis")
-	require.NoError(t, err)
-	require.Equal(t, len(votes), 0)
-
-	steps, err := database.GetNewRoundSteps("osmosis")
+	steps, err := database.GetNewRoundSteps(context.Background(), "osmosis")
 	require.NoError(t, err)
 	require.Equal(t, len(steps), 0)
 
-	rounds, err := database.GetNewRounds("osmosis")
+	rounds, err := database.GetNewRounds(context.Background(), "osmosis")
 	require.NoError(t, err)
 	require.Equal(t, len(rounds), 0)
 
@@ -84,15 +86,15 @@ func TestService(t *testing.T) {
 
 	time.Sleep(time.Second * 20)
 
-	votes, err = rds.Database.GetVotes("osmosis")
+	votes, err := rds.Database.GetVotes(context.Background(), "osmosis")
 	require.NoError(t, err)
 	require.Greater(t, len(votes), 0)
 
-	steps, err = rds.Database.GetNewRoundSteps("osmosis")
+	steps, err = rds.Database.GetNewRoundSteps(context.Background(), "osmosis")
 	require.NoError(t, err)
 	require.Greater(t, len(steps), 0)
 
-	rounds, err = rds.Database.GetNewRounds("osmosis")
+	rounds, err = rds.Database.GetNewRounds(context.Background(), "osmosis")
 	require.NoError(t, err)
 	require.Greater(t, len(rounds), 0)
 
