@@ -1,0 +1,1 @@
+DROP TABLE new_round_events;

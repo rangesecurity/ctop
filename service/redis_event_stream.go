@@ -67,6 +67,7 @@ func (rds *RedisEventStream) PersistVoteEvents(
 			}
 			log.Info().Any("vote", voteInfo).Msg("received vote")
 			if err := rds.Database.StoreVote(
+				rds.ctx,
 				network,
 				*voteInfo,
 			); err != nil {
@@ -98,6 +99,7 @@ func (rds *RedisEventStream) PersistNewRoundEvents(
 				continue
 			}
 			if err := rds.Database.StoreNewRound(
+				rds.ctx,
 				network,
 				*roundInfo,
 			); err != nil {
@@ -129,6 +131,7 @@ func (rds *RedisEventStream) PersistNewRoundStepEvents(
 				continue
 			}
 			if err := rds.Database.StoreNewRoundStep(
+				rds.ctx,
 				network,
 				*roundState,
 			); err != nil {
