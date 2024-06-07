@@ -16,33 +16,39 @@ type VoteEvent struct {
 	Round              int
 	BlockID            string
 	BlockTimestamp     time.Time
-	ValidatorAddress   string `pg:"validator_address"`
-	ValidatorIndex     int    `pg:"validator_index"`
+	ValidatorAddress   string
+	ValidatorIndex     int
 	ValidatorSignature []byte
 }
 
 type NewRoundEvent struct {
-	//lint:ignore U1000 Ignore
-	tableName struct{} `pg:"new_round_events"`
+	bun.BaseModel `bun:"table:new_round_events"`
 
-	ID      uuid.UUID `pg:"type:uuid,default:gen_random_uuid()"`
+	ID      uuid.UUID
 	Network string
 
 	Height           int
 	Round            int
 	Step             string
-	ValidatorAddress string `pg:"validator_address"`
-	ValidatorIndex   int    `pg:"validator_index"`
+	ValidatorAddress string
+	ValidatorIndex   int
 }
 
 type NewRoundStepEvent struct {
-	//lint:ignore U1000 Ignore
-	tableName struct{} `pg:"new_round_step_events"`
+	bun.BaseModel `bun:"table:new_round_step_events"`
 
-	ID      uuid.UUID `pg:"type:uuid,default:gen_random_uuid()"`
+	ID      uuid.UUID
 	Network string
 
 	Height int
 	Round  int
 	Step   string
+}
+
+type Validators struct {
+	bun.BaseModel `bun:"table:validators"`
+	ID            uuid.UUID
+	Network       string
+	// map validator_address => last_vote_time
+	Data map[string]interface{} `bun:"type:jsonb"`
 }

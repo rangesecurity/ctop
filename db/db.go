@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/cometbft/cometbft/types"
 	"github.com/rangesecurity/ctop/cmd/bun/migrations"
@@ -70,6 +71,32 @@ func (d *Database) StoreNewRoundStep(
 	}).Exec(ctx)
 	return err
 }
+
+func (d *Database) StoreOrUpdateValidators(
+	ctx context.Context,
+	network string,
+	data map[string]interface{},
+) error {
+	return d.DB.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+		var validators Validators
+		exists, err := tx.NewSelect().Model(&validators).Where("network = ?", network).Exists(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to check for validator(network=%s) existence %s", network, err)
+		}
+		if !exists {
+			validators = Validators{
+				Network: network,
+				Data:    data,
+			}
+			_, err = tx.NewInsert().Model(&validators).Exec(ctx)
+		} else {
+			validators.Data = data
+			_, err = tx.NewUpdate().Model(&validators).Column("data").Where("network = ?", network).Exec(ctx)
+		}
+		return err
+	})
+}
+
 func (d *Database) GetVotes(ctx context.Context, network string) (votes []VoteEvent, err error) {
 	err = d.DB.NewSelect().Model(&votes).Where("network = ?", network).Scan(ctx)
 	return
@@ -82,6 +109,11 @@ func (d *Database) GetNewRounds(ctx context.Context, network string) (rounds []N
 
 func (d *Database) GetNewRoundSteps(ctx context.Context, network string) (steps []NewRoundStepEvent, err error) {
 	err = d.DB.NewSelect().Model(&steps).Where("network = ?", network).Scan(ctx)
+	return
+}
+
+func (d *Database) GetValidators(ctx context.Context, network string) (validators Validators, err error) {
+	err = d.DB.NewSelect().Model(&validators).Where("network = ?", network).Scan(ctx)
 	return
 }
 

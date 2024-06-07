@@ -26,6 +26,7 @@ func TestDb(t *testing.T) {
 			(*db.VoteEvent)(nil),
 			(*db.NewRoundEvent)(nil),
 			(*db.NewRoundStepEvent)(nil),
+			(*db.Validators)(nil),
 		}
 		for _, model := range models {
 			_, err := database.DB.NewDropTable().Model(model).Exec(context.Background())
@@ -74,6 +75,28 @@ func TestDb(t *testing.T) {
 	roundSteps, err := database.GetNewRoundSteps(context.Background(), "osmosis")
 	require.NoError(t, err)
 	require.Len(t, roundSteps, 1)
+
+	data := map[string]interface{}{
+		"validator1": time.Unix(0, 0),
+		"validator2": time.Unix(0, 0),
+	}
+
+	require.NoError(t, database.StoreOrUpdateValidators(context.Background(), "osmosis", data))
+
+	validators, err := database.GetValidators(context.Background(), "osmosis")
+	require.NoError(t, err)
+	require.Len(t, validators.Data, 2)
+
+	data = map[string]interface{}{
+		"validator1": time.Unix(0, 0),
+		"validator2": time.Unix(0, 0),
+		"validator3": time.Unix(0, 0),
+	}
+	require.NoError(t, database.StoreOrUpdateValidators(context.Background(), "osmosis", data))
+
+	validators, err = database.GetValidators(context.Background(), "osmosis")
+	require.NoError(t, err)
+	require.Len(t, validators.Data, 3)
 }
 
 func exampleVote(height int64, t byte) *types.Vote {
