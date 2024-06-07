@@ -101,3 +101,16 @@ func TestWsClientSubscribeNewRoundStep(t *testing.T) {
 		}
 	}
 }
+
+func TestWsClientValidator(t *testing.T) {
+	envs, err := godotenv.Read("../.env")
+	require.NoError(t, err)
+	rpcUrl := envs["OSMOSIS_RPC"]
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	client, err := wsclient.NewClient(rpcUrl)
+	require.NoError(t, err)
+	valis, err := client.Validators(ctx)
+	require.NoError(t, err)
+	require.Greater(t, len(valis), 0)
+}

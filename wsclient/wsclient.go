@@ -2,6 +2,7 @@ package wsclient
 
 import (
 	"context"
+	"strings"
 
 	rpcclient "github.com/cometbft/cometbft/rpc/client/http"
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
@@ -48,4 +49,25 @@ func (ws *WsClient) SubscribeNewRoundStep(ctx context.Context) (<-chan coretypes
 
 func (ws *WsClient) UnsubscribeNewRoundStep(ctx context.Context) error {
 	return ws.client.Unsubscribe(ctx, "", types.EventQueryNewRoundStep.String())
+}
+
+func (ws *WsClient) Validators(ctx context.Context) ([]*types.Validator, error) {
+	var (
+		page       int
+		perPage    int = 100
+		validators     = make([]*types.Validator, 0, 200)
+	)
+	// question: is it sufficient to cap pages to 4? not aware of a cosmos chain with more than 200 validators
+	for page = 1; page < 5; page++ {
+		validatorRes, err := ws.client.Validators(ctx, nil, &page, &perPage)
+		if err != nil {
+			// if this error happens we have finished enumerating the validator set
+			if strings.Contains(err.Error(), "page should be within") {
+				break
+			}
+			return nil, err
+		}
+		validators = append(validators, validatorRes.Validators...)
+	}
+	return validators, nil
 }
