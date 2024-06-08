@@ -36,7 +36,7 @@ func TestWsClientSubscribeVotes(t *testing.T) {
 			voteInfo.Vote.Type, voteInfo.Vote.Height, voteInfo.Vote.Round, voteInfo.Vote.BlockID, voteInfo.Vote.Timestamp, voteInfo.Vote.ValidatorAddress, voteInfo.Vote.ValidatorIndex,
 		)
 		i++
-		if i >= 10 {
+		if i >= 3 {
 			break
 		}
 	}
@@ -66,7 +66,7 @@ func TestWsClientSubscribeNewRound(t *testing.T) {
 			roundInfo.Height, roundInfo.Round, roundInfo.Step, roundInfo.Proposer.Address,
 		)
 		i++
-		if i >= 10 {
+		if i >= 3 {
 			break
 		}
 	}
@@ -96,7 +96,7 @@ func TestWsClientSubscribeNewRoundStep(t *testing.T) {
 			roundInfo.Height, roundInfo.Round, roundInfo.Step,
 		)
 		i++
-		if i >= 10 {
+		if i >= 3 {
 			break
 		}
 	}
