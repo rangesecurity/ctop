@@ -92,9 +92,7 @@ func (d *Database) StoreOrUpdateValidators(
 			if validators.Data == nil {
 				validators.Data = make(map[string]interface{})
 			}
-			for k, v := range data {
-				validators.Data[k] = v
-			}
+			validators.Data = data
 			_, err = tx.NewUpdate().Model(&validators).Column("data").Where("network = ?", network).Exec(ctx)
 		}
 		return err

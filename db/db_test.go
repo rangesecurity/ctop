@@ -91,7 +91,7 @@ func TestDb(t *testing.T) {
 
 	validators, err = database.GetValidators(context.Background(), "osmosis")
 	require.NoError(t, err)
-	require.Len(t, validators.Data, 3)
+	require.Len(t, validators.Data, 1)
 }
 
 func exampleVote(height int64, t byte) *types.Vote {
