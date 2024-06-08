@@ -13,6 +13,7 @@ func RootCmd() *cli.App {
 			EventSubscriptionServiceCommand(),
 			ValidatorIndexerCommand(),
 			DBCommand(migrations.Migrations),
+			AnalyzerCommand(),
 		},
 	}
 }
