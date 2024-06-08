@@ -121,6 +121,28 @@ func (d *Database) GetValidators(ctx context.Context, network string) (validator
 	return
 }
 
+func (d *Database) GetLatestVotesForNetwork(
+	ctx context.Context,
+	network string,
+) ([]VoteEvent, error) {
+	subquery := d.DB.NewSelect().
+		Model((*VoteEvent)(nil)).
+		Column("validator_address", "network").
+		ColumnExpr("MAX(height) AS max_height").
+		Where("network IN (?)", bun.In([]string{network})).
+		Group("validator_address", "network")
+
+	var voteEvents []VoteEvent
+	err := d.DB.NewSelect().
+		Model(&voteEvents).
+		With("latest_heights", subquery).
+		TableExpr("vote_events AS ve").
+		Join("JOIN latest_heights AS lh ON ve.validator_address = lh.validator_address AND ve.network = lh.network AND ve.height = lh.max_height").
+		Where("ve.network IN (?)", bun.In([]string{network})).
+		Scan(ctx)
+	return voteEvents, err
+}
+
 func (d *Database) CreateSchema(ctx context.Context) error {
 	migrator := migrate.NewMigrator(d.DB, migrations.Migrations)
 	_, err := migrator.Migrate(ctx)
