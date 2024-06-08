@@ -1,38 +1,16 @@
-package main
+package cli
 
 import (
+	"context"
 	"fmt"
-	"log"
-	"os"
 	"strings"
 
-	"github.com/rangesecurity/ctop/cmd/bun/migrations"
 	"github.com/rangesecurity/ctop/db"
 	"github.com/uptrace/bun/migrate"
-
 	"github.com/urfave/cli/v2"
 )
 
-func main() {
-	app := &cli.App{
-		Name: "bun",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:  "env",
-				Value: "dev",
-				Usage: "environment",
-			},
-		},
-		Commands: []*cli.Command{
-			newDBCommand(migrations.Migrations),
-		},
-	}
-	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func newDBCommand(migrations *migrate.Migrations) *cli.Command {
+func DBCommand(migrations *migrate.Migrations) *cli.Command {
 	return &cli.Command{
 		Name:  "db",
 		Usage: "manage database migrations",
@@ -53,6 +31,30 @@ func newDBCommand(migrations *migrate.Migrations) *cli.Command {
 
 					migrator := migrate.NewMigrator(db, migrations)
 					return migrator.Init(c.Context)
+				},
+			},
+			{
+				Name:  "reset",
+				Usage: "resets migration table and recreates schema",
+				Action: func(c *cli.Context) error {
+					dbUrl := c.String("db.url")
+					bunDb := db.OpenDB(dbUrl)
+					defer bunDb.Close()
+					models := []interface{}{
+						(*db.VoteEvent)(nil),
+						(*db.NewRoundEvent)(nil),
+						(*db.NewRoundStepEvent)(nil),
+						(*db.Validators)(nil),
+					}
+					for _, model := range models {
+						_, _ = bunDb.NewDropTable().Model(model).Exec(context.Background())
+					}
+					migrator := migrate.NewMigrator(bunDb, migrations)
+					if err := migrator.Reset(c.Context); err != nil {
+						return err
+					}
+					_, err := migrator.Migrate(c.Context)
+					return err
 				},
 			},
 			{

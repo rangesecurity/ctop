@@ -9,21 +9,31 @@ import (
 
 	"github.com/rangesecurity/ctop/service"
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
+	"github.com/urfave/cli/v2"
 )
 
-func SubscriptionServiceCommand() *cobra.Command {
-	return &cobra.Command{
-		Use:   "subscription-service [redis-url] [network_name, network_url]..",
-		Short: "Stream events from the specified networks, storing them in redis",
-		Args:  cobra.MinimumNArgs(3),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, cancel := context.WithCancel(cmd.Context())
+func EventSubscriptionServiceCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "event-subscription-service",
+		Usage: "Stream events from specified networks, storing them in redis",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "redis.url",
+				Usage: "address of redis server",
+				Value: "localhost:6379",
+			},
+			&cli.StringSliceFlag{
+				Name:  "networks",
+				Usage: "pair of (network_name, network_url) specifying networks to connect to",
+			},
+		},
+		Action: func(c *cli.Context) error {
+			ctx, cancel := context.WithCancel(c.Context)
 			defer cancel()
-			networkConfigs := parseNetworkConfigs(args[1:])
+			networkConfigs := ParseNetworkConfigs(c.StringSlice("networks"))
 			subService, err := service.NewService(
 				ctx,
-				args[0],
+				c.String("redis.url"),
 				false,
 				networkConfigs,
 			)
@@ -51,12 +61,4 @@ func SubscriptionServiceCommand() *cobra.Command {
 			return nil
 		},
 	}
-}
-
-func parseNetworkConfigs(args []string) map[string]string {
-	config := make(map[string]string, len(args)/2)
-	for i := 0; i < len(args); i += 2 {
-		config[args[i]] = args[i+1]
-	}
-	return config
 }
