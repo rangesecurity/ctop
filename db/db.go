@@ -5,7 +5,8 @@ import (
 	"database/sql"
 
 	"github.com/cometbft/cometbft/types"
-	"github.com/rangesecurity/ctop/cmd/bun/migrations"
+	"github.com/rangesecurity/ctop/bun/migrations"
+	"github.com/rangesecurity/ctop/common"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
@@ -25,16 +26,16 @@ func New(url string) (*Database, error) {
 func (d *Database) StoreVote(
 	ctx context.Context,
 	network string,
-	vote types.Vote,
+	vote common.ParsedVote,
 ) error {
 	_, err := d.DB.NewInsert().Model(&VoteEvent{
 		Network:            network,
-		VoteType:           vote.Type.String(),
-		Height:             int(vote.Height),
+		VoteType:           vote.Type,
+		Height:             int(vote.BlockNumber),
 		Round:              int(vote.Round),
-		BlockID:            vote.BlockID.String(),
+		BlockID:            vote.BlockID,
 		BlockTimestamp:     vote.Timestamp,
-		ValidatorAddress:   vote.ValidatorAddress.String(),
+		ValidatorAddress:   vote.ValidatorAddress,
 		ValidatorIndex:     int(vote.ValidatorIndex),
 		ValidatorSignature: vote.Signature,
 	}).Exec(ctx)
@@ -70,6 +71,36 @@ func (d *Database) StoreNewRoundStep(
 	}).Exec(ctx)
 	return err
 }
+
+func (d *Database) StoreOrUpdateValidators(
+	ctx context.Context,
+	network string,
+	data map[string]interface{},
+) error {
+	return d.DB.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+		var (
+			validators Validators
+			err        error
+		)
+		if err = tx.NewSelect().Model(&validators).Where("network = ?", network).Scan(ctx); err != nil {
+			validators = Validators{
+				Network: network,
+				Data:    data,
+			}
+			_, err = tx.NewInsert().Model(&validators).Exec(ctx)
+		} else {
+			if validators.Data == nil {
+				validators.Data = make(map[string]interface{})
+			}
+			for k, v := range data {
+				validators.Data[k] = v
+			}
+			_, err = tx.NewUpdate().Model(&validators).Column("data").Where("network = ?", network).Exec(ctx)
+		}
+		return err
+	})
+}
+
 func (d *Database) GetVotes(ctx context.Context, network string) (votes []VoteEvent, err error) {
 	err = d.DB.NewSelect().Model(&votes).Where("network = ?", network).Scan(ctx)
 	return
@@ -82,6 +113,11 @@ func (d *Database) GetNewRounds(ctx context.Context, network string) (rounds []N
 
 func (d *Database) GetNewRoundSteps(ctx context.Context, network string) (steps []NewRoundStepEvent, err error) {
 	err = d.DB.NewSelect().Model(&steps).Where("network = ?", network).Scan(ctx)
+	return
+}
+
+func (d *Database) GetValidators(ctx context.Context, network string) (validators Validators, err error) {
+	err = d.DB.NewSelect().Model(&validators).Where("network = ?", network).Scan(ctx)
 	return
 }
 

@@ -14,15 +14,14 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func RedisEventStreamCommand() *cli.Command {
+func ValidatorIndexerCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "redis-event-stream",
-		Usage: "Stream indexed events from redis and persist to database",
+		Name:  "validator-indexer",
+		Usage: "Periodically poll networks for validators, persisting them in db",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:  "redis.url",
-				Usage: "address of redis server",
-				Value: "localhost:6379",
+			&cli.DurationFlag{
+				Name:  "poll.frequency",
+				Usage: "duration in seconds to poll networks",
 			},
 			&cli.StringFlag{
 				Name:  "db.url",
@@ -30,53 +29,32 @@ func RedisEventStreamCommand() *cli.Command {
 			},
 			&cli.StringSliceFlag{
 				Name:  "networks",
-				Usage: "Networks for which we are streaming events",
+				Usage: "pair of (network_name, endpoint) for networks to connect to",
 			},
 		},
 		Action: func(c *cli.Context) error {
 			ctx, cancel := context.WithCancel(c.Context)
 			defer cancel()
+			pollFrequency := c.Duration("poll.frequency")
 			database, err := db.New(c.String("db.url"))
 			if err != nil {
 				return err
 			}
-			eventStream, err := service.NewRedisEventStream(
+			endpoints := ParseNetworkConfigs(c.StringSlice("networks"))
+			indexer, err := service.NewValidatorIndexer(
 				ctx,
-				c.String("redis.url"),
-				false,
 				database,
+				endpoints,
 			)
 			if err != nil {
 				return err
 			}
-
-			wg := sync.WaitGroup{}
-			for _, network := range c.StringSlice("networks") {
-
-				wg.Add(1)
-				go func(network string) {
-					defer wg.Done()
-					if err := eventStream.PersistNewRoundEvents(network); err != nil {
-						log.Error().Err(err).Str("event.type", "new_rounds").Msg("failed to persist new round events")
-					}
-				}(network)
-				wg.Add(1)
-				go func(network string) {
-					defer wg.Done()
-					if err := eventStream.PersistNewRoundStepEvents(network); err != nil {
-						log.Error().Err(err).Str("event.type", "new_round_steps").Msg("failed to persist new round step events")
-					}
-				}(network)
-				wg.Add(1)
-				go func(network string) {
-					defer wg.Done()
-					if err := eventStream.PersistVoteEvents(network); err != nil {
-						log.Error().Err(err).Str("event.type", "vote").Msg("failed to persist vote events")
-					}
-				}(network)
-
-			}
-
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				indexer.Start(pollFrequency)
+			}()
 			// Create a channel to receive OS signals
 			sigs := make(chan os.Signal, 1)
 			// Create a channel to indicate when to exit
