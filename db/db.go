@@ -7,7 +7,6 @@ import (
 	"github.com/cometbft/cometbft/types"
 	"github.com/rangesecurity/ctop/bun/migrations"
 	"github.com/rangesecurity/ctop/common"
-	"github.com/rs/zerolog/log"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
@@ -29,7 +28,6 @@ func (d *Database) StoreVote(
 	network string,
 	vote common.ParsedVote,
 ) error {
-	log.Info().Any("block_id", vote.BlockID).Msg("logging vote")
 	_, err := d.DB.NewInsert().Model(&VoteEvent{
 		Network:            network,
 		VoteType:           vote.Type,
