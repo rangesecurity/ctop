@@ -327,10 +327,11 @@ func parseRedisValueToVote(blockHeight int64, values map[string]interface{}) (*c
 		round            int64
 		blockID          string
 		timestamp        time.Time
-		validatorAddress types.Address
+		validatorAddress string
 		validatorIndex   int64
 		signature        []byte
 	)
+
 	if values["type"] == nil {
 		return nil, fmt.Errorf("type is nil")
 	} else if type_, ok = values["type"].(string); !ok {
@@ -365,10 +366,8 @@ func parseRedisValueToVote(blockHeight int64, values map[string]interface{}) (*c
 
 	if values["validator"] == nil {
 		return nil, fmt.Errorf("validator is nil")
-	} else if validatorAddress_, ok := values["validator"].(string); !ok {
+	} else if validatorAddress, ok = values["validator"].(string); !ok {
 		return nil, fmt.Errorf("failed to parse validator")
-	} else {
-		validatorAddress = crypto.AddressHash([]byte(validatorAddress_))
 	}
 
 	if values["index"] == nil {
@@ -396,7 +395,7 @@ func parseRedisValueToVote(blockHeight int64, values map[string]interface{}) (*c
 		BlockNumber:      blockHeight,
 		BlockID:          blockID,
 		Timestamp:        timestamp,
-		ValidatorAddress: validatorAddress.String(),
+		ValidatorAddress: validatorAddress,
 		ValidatorIndex:   validatorIndex,
 		Signature:        signature,
 	}, nil
