@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/cometbft/cometbft/types"
 	"github.com/rangesecurity/ctop/bun/migrations"
 	"github.com/rangesecurity/ctop/common"
 	"github.com/uptrace/bun"
@@ -31,7 +30,7 @@ func (d *Database) StoreVote(
 	_, err := d.DB.NewInsert().Model(&VoteEvent{
 		Network:            network,
 		VoteType:           vote.Type,
-		Height:             int(vote.BlockNumber),
+		Height:             int(vote.Height),
 		Round:              int(vote.Round),
 		BlockID:            vote.BlockID,
 		BlockTimestamp:     vote.Timestamp,
@@ -45,15 +44,15 @@ func (d *Database) StoreVote(
 func (d *Database) StoreNewRound(
 	ctx context.Context,
 	network string,
-	roundInfo types.EventDataNewRound,
+	roundInfo common.ParsedNewRound,
 ) error {
 	_, err := d.DB.NewInsert().Model(&NewRoundEvent{
 		Network:          network,
 		Height:           int(roundInfo.Height),
 		Round:            int(roundInfo.Round),
 		Step:             roundInfo.Step,
-		ValidatorAddress: roundInfo.Proposer.Address.String(),
-		ValidatorIndex:   int(roundInfo.Proposer.Index),
+		ValidatorAddress: roundInfo.ProposerAddress,
+		ValidatorIndex:   int(roundInfo.ProposerIndex),
 	}).Exec(ctx)
 	return err
 }
@@ -61,7 +60,7 @@ func (d *Database) StoreNewRound(
 func (d *Database) StoreNewRoundStep(
 	ctx context.Context,
 	network string,
-	roundInfo types.EventDataRoundState,
+	roundInfo common.ParsedNewRoundStep,
 ) error {
 	_, err := d.DB.NewInsert().Model(&NewRoundStepEvent{
 		Network: network,

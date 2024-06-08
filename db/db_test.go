@@ -46,14 +46,12 @@ func TestDb(t *testing.T) {
 
 	mockKey1 := types.NewMockPV()
 	validator1 := types.NewValidator(mockKey1.PrivKey.PubKey(), 10)
-	require.NoError(t, database.StoreNewRound(context.Background(), "osmosis", types.EventDataNewRound{
-		Height: 112345,
-		Round:  0,
-		Step:   "step",
-		Proposer: types.ValidatorInfo{
-			Address: validator1.Address,
-			Index:   1,
-		},
+	require.NoError(t, database.StoreNewRound(context.Background(), "osmosis", common.ParsedNewRound{
+		Height:          112345,
+		Round:           0,
+		Step:            "step",
+		ProposerAddress: validator1.Address.String(),
+		ProposerIndex:   1,
 	}))
 
 	newRounds, err := database.GetNewRounds(context.Background(), "osmosis")
@@ -63,7 +61,7 @@ func TestDb(t *testing.T) {
 	require.NoError(t, database.StoreNewRoundStep(
 		context.Background(),
 		"osmosis",
-		types.EventDataRoundState{
+		common.ParsedNewRoundStep{
 			Height: 11234,
 			Round:  0,
 			Step:   "RoundStepPropose",
@@ -121,7 +119,7 @@ func exampleVote(height int64, t byte) *types.Vote {
 func voteToParsedVote(vote *types.Vote) common.ParsedVote {
 	return common.ParsedVote{
 		Type:             vote.Type.String(),
-		BlockNumber:      vote.Height,
+		Height:           vote.Height,
 		BlockID:          vote.BlockID.String(),
 		ValidatorAddress: vote.ValidatorAddress.String(),
 		ValidatorIndex:   int64(vote.ValidatorIndex),
