@@ -9,7 +9,7 @@ import (
 
 type VoteEvent struct {
 	bun.BaseModel      `bun:"table:vote_events"`
-	ID                 uuid.UUID
+	ID                 uuid.UUID `bun:"type:uuid,default:uuid_generate_v4()"`
 	Network            string
 	VoteType           string
 	Height             int
@@ -24,7 +24,7 @@ type VoteEvent struct {
 type NewRoundEvent struct {
 	bun.BaseModel `bun:"table:new_round_events"`
 
-	ID      uuid.UUID
+	ID      uuid.UUID `bun:"type:uuid,default:uuid_generate_v4()"`
 	Network string
 
 	Height           int
@@ -37,7 +37,7 @@ type NewRoundEvent struct {
 type NewRoundStepEvent struct {
 	bun.BaseModel `bun:"table:new_round_step_events"`
 
-	ID      uuid.UUID
+	ID      uuid.UUID `bun:"type:uuid,default:uuid_generate_v4()"`
 	Network string
 
 	Height int
@@ -47,7 +47,7 @@ type NewRoundStepEvent struct {
 
 type Validators struct {
 	bun.BaseModel `bun:"table:validators"`
-	ID            uuid.UUID
+	ID            uuid.UUID `bun:"type:uuid,default:uuid_generate_v4()"`
 	Network       string
 	// map validator_address => last_vote_time
 	Data map[string]interface{} `bun:"type:jsonb"`

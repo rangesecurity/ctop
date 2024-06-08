@@ -2,7 +2,6 @@ package db_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -12,7 +11,8 @@ import (
 	"github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cometbft/cometbft/types"
-	"github.com/rangesecurity/ctop/cmd/bun/migrations"
+	"github.com/rangesecurity/ctop/bun/migrations"
+	"github.com/rangesecurity/ctop/common"
 	"github.com/rangesecurity/ctop/db"
 	"github.com/stretchr/testify/require"
 )
@@ -29,10 +29,7 @@ func TestDb(t *testing.T) {
 			(*db.Validators)(nil),
 		}
 		for _, model := range models {
-			_, err := database.DB.NewDropTable().Model(model).Exec(context.Background())
-			if err != nil {
-				fmt.Println("failed to delete ", err)
-			}
+			_, _ = database.DB.NewDropTable().Model(model).Exec(context.Background())
 		}
 	}
 	recreate := func() {
@@ -42,7 +39,7 @@ func TestDb(t *testing.T) {
 		database.CreateSchema(context.Background())
 	}
 	recreate()
-	require.NoError(t, database.StoreVote(context.Background(), "osmosis", *exampleVote(12345, byte(cmtproto.PrevoteType))))
+	require.NoError(t, database.StoreVote(context.Background(), "osmosis", voteToParsedVote(exampleVote(12345, byte(cmtproto.PrevoteType)))))
 	votes, err := database.GetVotes(context.Background(), "osmosis")
 	require.NoError(t, err)
 	require.Len(t, votes, 1)
@@ -88,8 +85,6 @@ func TestDb(t *testing.T) {
 	require.Len(t, validators.Data, 2)
 
 	data = map[string]interface{}{
-		"validator1": time.Unix(0, 0),
-		"validator2": time.Unix(0, 0),
 		"validator3": time.Unix(0, 0),
 	}
 	require.NoError(t, database.StoreOrUpdateValidators(context.Background(), "osmosis", data))
@@ -120,5 +115,16 @@ func exampleVote(height int64, t byte) *types.Vote {
 		ValidatorAddress: crypto.AddressHash([]byte("validator_address")),
 		ValidatorIndex:   56789,
 		Signature:        []byte("hello"),
+	}
+}
+
+func voteToParsedVote(vote *types.Vote) common.ParsedVote {
+	return common.ParsedVote{
+		Type:             vote.Type.String(),
+		BlockNumber:      vote.Height,
+		BlockID:          vote.BlockID.String(),
+		ValidatorAddress: vote.ValidatorAddress.String(),
+		ValidatorIndex:   int64(vote.ValidatorIndex),
+		Signature:        vote.Signature,
 	}
 }

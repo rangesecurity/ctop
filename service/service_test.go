@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/rangesecurity/ctop/cmd/bun/migrations"
+	"github.com/rangesecurity/ctop/bun/migrations"
 	"github.com/rangesecurity/ctop/db"
 	"github.com/rangesecurity/ctop/service"
 	"github.com/stretchr/testify/require"
@@ -41,6 +41,7 @@ func TestService(t *testing.T) {
 			(*db.VoteEvent)(nil),
 			(*db.NewRoundEvent)(nil),
 			(*db.NewRoundStepEvent)(nil),
+			(*db.Validators)(nil),
 		}
 		for _, model := range models {
 			_, err := database.DB.NewDropTable().Model(model).Exec(context.Background())

@@ -3,10 +3,11 @@ package db
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/cometbft/cometbft/types"
-	"github.com/rangesecurity/ctop/cmd/bun/migrations"
+	"github.com/rangesecurity/ctop/bun/migrations"
+	"github.com/rangesecurity/ctop/common"
+	"github.com/rs/zerolog/log"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
@@ -26,16 +27,17 @@ func New(url string) (*Database, error) {
 func (d *Database) StoreVote(
 	ctx context.Context,
 	network string,
-	vote types.Vote,
+	vote common.ParsedVote,
 ) error {
+	log.Info().Any("block_id", vote.BlockID).Msg("logging vote")
 	_, err := d.DB.NewInsert().Model(&VoteEvent{
 		Network:            network,
-		VoteType:           vote.Type.String(),
-		Height:             int(vote.Height),
+		VoteType:           vote.Type,
+		Height:             int(vote.BlockNumber),
 		Round:              int(vote.Round),
-		BlockID:            vote.BlockID.String(),
+		BlockID:            vote.BlockID,
 		BlockTimestamp:     vote.Timestamp,
-		ValidatorAddress:   vote.ValidatorAddress.String(),
+		ValidatorAddress:   vote.ValidatorAddress,
 		ValidatorIndex:     int(vote.ValidatorIndex),
 		ValidatorSignature: vote.Signature,
 	}).Exec(ctx)
@@ -78,19 +80,23 @@ func (d *Database) StoreOrUpdateValidators(
 	data map[string]interface{},
 ) error {
 	return d.DB.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
-		var validators Validators
-		exists, err := tx.NewSelect().Model(&validators).Where("network = ?", network).Exists(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to check for validator(network=%s) existence %s", network, err)
-		}
-		if !exists {
+		var (
+			validators Validators
+			err        error
+		)
+		if err = tx.NewSelect().Model(&validators).Where("network = ?", network).Scan(ctx); err != nil {
 			validators = Validators{
 				Network: network,
 				Data:    data,
 			}
 			_, err = tx.NewInsert().Model(&validators).Exec(ctx)
 		} else {
-			validators.Data = data
+			if validators.Data == nil {
+				validators.Data = make(map[string]interface{})
+			}
+			for k, v := range data {
+				validators.Data[k] = v
+			}
 			_, err = tx.NewUpdate().Model(&validators).Column("data").Where("network = ?", network).Exec(ctx)
 		}
 		return err

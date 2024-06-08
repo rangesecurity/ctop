@@ -7,12 +7,10 @@ import (
 	"strings"
 	"time"
 
-	cmtbytes "github.com/cometbft/cometbft/libs/bytes"
-	cmtpubsub "github.com/cometbft/cometbft/libs/pubsub"
-	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
-
 	"github.com/cometbft/cometbft/crypto"
+	cmtpubsub "github.com/cometbft/cometbft/libs/pubsub"
 	"github.com/cometbft/cometbft/types"
+	"github.com/rangesecurity/ctop/common"
 	"github.com/rangesecurity/ctop/cred"
 	"github.com/rangesecurity/ctop/db"
 	"github.com/redis/go-redis/v9"
@@ -60,12 +58,11 @@ func (rds *RedisEventStream) PersistVoteEvents(
 	for {
 		select {
 		case msg := <-outCh:
-			voteInfo, ok := msg.(*types.Vote)
+			voteInfo, ok := msg.(*common.ParsedVote)
 			if !ok {
 				log.Error().Msg("unexpected msg type")
 				continue
 			}
-			log.Info().Any("vote", voteInfo).Msg("received vote")
 			if err := rds.Database.StoreVote(
 				rds.ctx,
 				network,
@@ -322,7 +319,7 @@ func parseRedisValueToRoundState(blockHeight int64, values map[string]interface{
 	}, nil
 }
 
-func parseRedisValueToVote(blockHeight int64, values map[string]interface{}) (*types.Vote, error) {
+func parseRedisValueToVote(blockHeight int64, values map[string]interface{}) (*common.ParsedVote, error) {
 	var (
 		err              error
 		ok               bool
@@ -392,37 +389,15 @@ func parseRedisValueToVote(blockHeight int64, values map[string]interface{}) (*t
 	} else {
 		signature = []byte(signature_)
 	}
-
-	blockParts := strings.Split(blockID, ":")
-	if len(blockParts) != 3 {
-		return nil, fmt.Errorf("failed to parse blockId")
-	}
-	blockIdHash := cmtbytes.HexBytes{}
-	if err := blockIdHash.Unmarshal([]byte(blockParts[0])); err != nil {
-		return nil, err
-	}
-	partTotal, err := strconv.ParseUint(blockParts[1], 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	partHash := cmtbytes.HexBytes{}
-	if err := blockIdHash.Unmarshal([]byte(blockParts[2])); err != nil {
-		return nil, err
-	}
-	return &types.Vote{
-		Type:   cmtproto.SignedMsgType(cmtproto.SignedMsgType_value[type_]),
-		Round:  int32(round),
-		Height: blockHeight,
-		BlockID: types.BlockID{
-			Hash: blockIdHash,
-			PartSetHeader: types.PartSetHeader{
-				Total: uint32(partTotal),
-				Hash:  partHash,
-			},
-		},
+	log.Info().Str("blockID", blockID).Msg("parsing vote")
+	return &common.ParsedVote{
+		Type:             type_,
+		Round:            round,
+		BlockNumber:      blockHeight,
+		BlockID:          blockID,
 		Timestamp:        timestamp,
-		ValidatorAddress: validatorAddress,
-		ValidatorIndex:   int32(validatorIndex),
+		ValidatorAddress: validatorAddress.String(),
+		ValidatorIndex:   validatorIndex,
 		Signature:        signature,
 	}, nil
 }
