@@ -4,25 +4,28 @@ Provides a top-like service for monitoring consensus data of cosmos chains
 
 ## Architecture
 
-### Event Detection
+### Event Subscription Service
 
-Event detection consists of two services, the main subscription service is responsible for subscribing to events, and pushing received events into a redis queue, while the secondary service streams events from the redis queue persisting the events into Postgres for further analysis. The following event subscriptions exist:
+The event subscription service connects to tendermint RPC's and streams the following events into a redis queue:
 
 * `NewRound`
 * `NewRoundStep`
 * `Vote`
 
-### Validator Indexing
+### Redis Event Stream Service
 
-The validator indexing service maintains a list of validators which are in the active set. This is used for implementing analysis tools like the missing vote analyzer.
+The redis event stream service connects to the redis queue and streams events in real-time, persisting them into a postgres database for further analysis.
 
-## Analyzer
+### Validator Indexing Service
 
-The analyzer provides analysis tools that analyzes indexed events in an attempt to provide insights into conditions that may result in chain halts or other liveliness issues.
+The validator indexing service connects to tendermint RPC's and retrieves the list of validators which are in the active set and persists this information into postgres; Any changes to the active set (adding/removal of validators) is recorded.
 
-### Missing Vote Analyzer
+### Analyzer Service
 
-The missing vote analyzer is used to provide alerts when validators in the active set fail to vote in at least one round for the most recent block.
+The analyzer service provides analysis tools that analyzes indexed data in an attempt to provide insights into conditions that may result in chain halts or other liveliness issues. The following analyzer tools are available:
+
+* Missing Vote Analyzer
+  * Provides alerts when validators in the active set fail to vote in at least one round for the most recent block
 
 ## Usage
 
@@ -30,8 +33,28 @@ The missing vote analyzer is used to provide alerts when validators in the activ
 
 * Postgres
 * Redis
+* Golang
 
-### Event Monitoring
+### Building CLI
+
+To build the cli run the following command from the root folder of the repository
+
+```shell
+$> go build
+```
+
+### Database Preparation
+
+To prepare the database you need to intialize the migrations table, and run a migration. This is required in order for ctop to be used.
+
+```shell
+# initialize migration table
+$> ./ctop db --db.url <db_url> init
+# run migrations
+$> ./ctop db --db.url <db_url> migrate
+```
+
+### Event Subscription
 
 To launch the event subscription service which monitors `Vote`, `NewRound` and `NewRoundStep` events, run the following command.
 
@@ -49,7 +72,7 @@ $>  ./ctop event-subscription-service --networks osmosis,tcp://osmosis.example.c
 
 ### Redis Event Stream
 
-To stream events that are stored in redis, and persist them into postgres run the following command
+To launch the redis event stream service which is responsible for streaming events from redis and persisting them into postgres, run the following command.
 
 ```shell
 $>  ./ctop redis-event-stream --redis.url <redis_url> --db.url <db_url> --networks <networks>
@@ -63,11 +86,11 @@ $> ./ctop redis-event-stream --redis.url localhost:6379 --db.url postgres://post
 
 ### Missing Vote Analyzer
 
-The missing vote analyzer requires two components the validator indexer and the analyzer itself.
+The missing vote analyzer requires two components the validator indexer and the analyzer itself. This service is dependent on the event subscription and redis event stream services.
 
 #### Validator Indexer
 
-In order for the missing vote analyzer, the active validator set must be indexed. To do this on a periodic basis you can run the following command
+In order for the missing vote analyzer to work, the active validator set must be indexed. While it's not needed to constantly run the validator indexer service, it is recommended that you do this so that any changes to the active validator set are recorded.
 
 ```shell
 $> ./ctop validator-indexer --poll.frequency <frequency> --db.url <db_url> --networks <chain_name>,<chain_rpc>
@@ -79,9 +102,9 @@ Example:
 $> ./ctop validator-indexer --poll.frequency 60s --db.url postgres://postgres:password123@localhost:5432/ctop --networks osmosis,tcp://osmosis.example.com:8080
 ```
 
-### Running The Analyzer
+#### Running The Analyzer
 
-To run the analyzer run the following command. To provide up to date information ensure the redis event stream and event monitoring services are running
+To run the analyzer use the following command. To provide up to date information ensure the redis event stream and event monitoring services are running.
 
 
 ```shell
