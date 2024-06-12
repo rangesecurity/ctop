@@ -1,0 +1,18 @@
+version: "3.5"
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: "ctop"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "password123"
+      POSTGRES_EXTENSIONS: pg_trgm
+    ports:
+      - "5432:5432"
+  redis:
+    image: redis:7.2-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    # save 1 or more writes every 10 seconds
+    command: redis-server --save 10 1 --loglevel debug --logfile /tmp/redis.log

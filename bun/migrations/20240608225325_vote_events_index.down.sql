@@ -1,0 +1,3 @@
+DROP INDEX idx_vote_events_validator_network_height;
+
+DROP INDEX idx_vote_events_network;
