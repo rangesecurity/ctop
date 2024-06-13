@@ -4,3 +4,5 @@
 ctop
 
 cmd/bun/bun
+
+ansible/inventories/host_vars/titan.rase.live/vars.secret.yaml
