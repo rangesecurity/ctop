@@ -5,19 +5,39 @@
   tasks:
     - name: Ship files to server
       synchronize:
-        src: ../gui/dist/
-        dest: '{{app_root}}'
+        src: ../ctop
+        dest: '{{app_root}}/ctop'
         recursive: yes
         delete: yes
 
-    - name: Ship service file to server
+    - name: Ship event subscription service file to server
       template:
-        src: "pvtop.service.j2"
-        dest: "/etc/systemd/system/pvtop.service"
+        src: "ctop_event_subscription.service.j2"
+        dest: "/etc/systemd/system/ctop_event_subscription.service"
         mode: 0755
 
-    - name: Configuring service
+    - name: Ship redis event stream service file to server
+      template:
+        src: "ctop_redis_event_stream.service.j2"
+        dest: "/etc/systemd/system/ctop_redis_event_stream.service"
+        mode: 0755
+
+    - name: init database
+      command: '{{app_root}}/ctop db --db.url {{postgres_url}} init'
+    
+    - name: migrate database
+      command: '{{app_root}}/ctop db --db.url {{postgres_url}} migrate'
+
+    - name: Configuring event subscription service
       service:
-        name: pvtop
+        name: ctop_event_subscription
         state: restarted
         enabled: true
+        daemon_reload: true
+
+    - name: Configuring redis event stream service
+      service:
+        name: ctop_redis_event_stream
+        state: restarted
+        enabled: true
+        daemon_reload: true

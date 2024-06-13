@@ -4,4 +4,4 @@ ansible_distribution: Debian
 distro_codename: bullseye
 
 # App
-app_root: /home/pvtop
+app_root: /home/range

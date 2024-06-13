@@ -1,10 +1,10 @@
 [Unit]
-Description=pvtop
+Description=ctop event subscription
 After=network-online.target
 
 [Service]
 Type=simple
-ExecStart={{ item.command }}
+ExecStart=/home/range/ctop event-subscription-service --networks osmosis,tcp://51.89.6.201:12557
 
 # Restart every >2 seconds to avoid StartLimitInterval failure
 RestartSec=30
