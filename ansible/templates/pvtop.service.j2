@@ -1,0 +1,14 @@
+[Unit]
+Description=pvtop
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart={{ item.command }}
+
+# Restart every >2 seconds to avoid StartLimitInterval failure
+RestartSec=30
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
