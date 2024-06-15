@@ -4,7 +4,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/home/range/ctop event-subscription-service --networks osmosis,tcp://51.89.6.201:12557
+ExecStart=/home/range/ctop event-subscription-service --networks osmosis,tcp://51.89.6.201:12557,stride,https://stride-rpc.polkachu.com:443,noble,https://noble-rpc.polkachu.com:443,neutron,http://51.89.41.49:26657,dymension,http://162.19.204.58:26657
 
 # Restart every >2 seconds to avoid StartLimitInterval failure
 RestartSec=30

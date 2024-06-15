@@ -4,7 +4,7 @@ After=network-online.target ctop_event_stream.service
 
 [Service]
 Type=simple
-ExecStart=/home/range/ctop redis-event-stream --networks osmosis --db.url {{ postgres_url }}
+ExecStart=/home/range/ctop redis-event-stream --networks osmos,stride,noble,neutron,dymension --db.url {{ postgres_url }}
 
 
 # Restart every >2 seconds to avoid StartLimitInterval failure
