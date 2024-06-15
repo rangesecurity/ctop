@@ -18,9 +18,9 @@ type Connector struct {
 	ctx            context.Context
 }
 
-func NewConnector(ctx context.Context, network string, url string) (*Connector, error) {
+func NewConnector(ctx context.Context, network, url, authToken string) (*Connector, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	client, err := wsclient.NewClient(url)
+	client, err := wsclient.NewClient(url, authToken)
 	if err != nil {
 		cancel()
 		return nil, err

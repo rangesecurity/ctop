@@ -36,7 +36,8 @@ func NewService(
 	connectors := make([]*Connector, 0, len(endpoints))
 
 	for network, url := range endpoints {
-		connector, err := NewConnector(ctx, network, url)
+		log.Warn().Msg("TODO: supply auth token")
+		connector, err := NewConnector(ctx, network, url, "")
 		if err != nil {
 			cancel()
 			return nil, err

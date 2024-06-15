@@ -2,6 +2,7 @@ package wsclient
 
 import (
 	"context"
+	"net/http"
 	"strings"
 
 	rpcclient "github.com/cometbft/cometbft/rpc/client/http"
@@ -13,8 +14,22 @@ type WsClient struct {
 	client *rpcclient.HTTP
 }
 
-func NewClient(url string) (*WsClient, error) {
-	client, err := rpcclient.New(url, "/websocket")
+func NewClient(url string, authToken string) (*WsClient, error) {
+	var (
+		client *rpcclient.HTTP
+		err    error
+	)
+	if authToken != "" {
+		authTransport := &AuthTransport{
+			Transport: http.DefaultTransport,
+			Token:     authToken,
+		}
+		client, err = rpcclient.NewWithClient(url, "/websocket", &http.Client{
+			Transport: authTransport,
+		})
+	} else {
+		client, err = rpcclient.New(url, "/websocket")
+	}
 	if err != nil {
 		return nil, err
 	}
